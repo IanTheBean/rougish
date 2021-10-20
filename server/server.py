@@ -87,7 +87,6 @@ class Client(threading.Thread):
                 server.send_all_but(self.id, "update_position", str(str(self.id) + "|" + ":".join(str(s) for s in self.pos)))
 
 
-
 def get_map_as_string():
     row_arr = []
     for row in integer_map:

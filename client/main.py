@@ -6,13 +6,16 @@ from pygame.locals import *
 
 import sys
 
-integer_map = np.ones((100, 100))
+name = input("Enter your name: ")
+
+barrier_blocks = [5, 6, 7, 8, 9, 10]
 width, height = 640, 480
 tile_columns, tile_rows = 16, 12
 tile_size = int(width / tile_columns)
 screen = pygame.display.set_mode((width, height))
 pygame.font.init()
-font = pygame.font.SysFont('Comic Sans MS', 15)
+font = pygame.font.Font('assets/fonts/pixel_font.ttf', 10)
+
 
 class Local_Player:
     def __init__(self, _name):
@@ -26,7 +29,7 @@ class Local_Player:
         self.other_players = []
 
     def draw(self, _screen):
-        player_image = pygame.image.load("assets/player.png")
+        player_image = pygame.image.load("assets/players/player.png")
         player_sprite = pygame.transform.scale(player_image, (tile_size, tile_size))
         _screen.blit(player_sprite, ((tile_columns / 2) * tile_size, int((tile_rows / 2) * tile_size)))
 
@@ -44,17 +47,15 @@ class Player:
         self.pos = _position
 
     def draw(self, _screen, _local_player):
-        # if _local_player.pos[0] - tile_columns < self.pos[0] < _local_player.pos[0] + tile_columns and _local_player.pos[1] - tile_rows < self.pos[1] < _local_player.pos[1] + tile_rows:
         x_diff = self.pos[0] - _local_player.pos[0]
         y_diff = self.pos[1] - _local_player.pos[1]
-        player_image = pygame.image.load("assets/player.png")
-        player_sprite = pygame.transform.scale(player_image, (tile_size, tile_size))
-        _screen.blit(player_sprite, (int(tile_columns/2 + x_diff) * tile_size, int((tile_rows/2 + y_diff) * tile_size)))
-        text_surface = font.render(self.name, False, (100, 255, 100))
-        _screen.blit(text_surface, (int(tile_columns/2 + x_diff) * tile_size, int((tile_rows/2 + y_diff) * tile_size - (tile_size/2))))
+        if abs(x_diff) <= tile_columns/2 and abs(y_diff) <= tile_rows/2:
+            player_image = pygame.image.load("assets/players/player.png")
+            player_sprite = pygame.transform.scale(player_image, (tile_size, tile_size))
+            _screen.blit(player_sprite, (int(tile_columns/2 + x_diff) * tile_size, int((tile_rows/2 + y_diff) * tile_size)))
+            text_surface = font.render(self.name, False, (100, 255, 100))
+            _screen.blit(text_surface, (int(tile_columns/2 + x_diff) * tile_size, int((tile_rows/2 + y_diff) * tile_size - (tile_size/3))))
 
-
-name = input("Enter your name: ")
 
 player = Local_Player(name)
 
@@ -125,27 +126,32 @@ while True:
             sys.exit()
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_d:
-                player.pos = (player.pos[0] + 1, player.pos[1])
-                network.send("update_my_position", ":".join(str(s) for s in player.pos))
+                if player.integer_map[player.pos[1]][player.pos[0] + 1] not in barrier_blocks:
+                    player.pos = (player.pos[0] + 1, player.pos[1])
+                    network.send("update_my_position", ":".join(str(s) for s in player.pos))
             if event.key == pygame.K_a:
-                player.pos = (player.pos[0] - 1, player.pos[1])
-                network.send("update_my_position", ":".join(str(s) for s in player.pos))
+                if player.integer_map[player.pos[1]][player.pos[0] - 1] not in barrier_blocks:
+                    player.pos = (player.pos[0] - 1, player.pos[1])
+                    network.send("update_my_position", ":".join(str(s) for s in player.pos))
             if event.key == pygame.K_w:
-                player.pos = (player.pos[0], player.pos[1] - 1)
-                network.send("update_my_position", ":".join(str(s) for s in player.pos))
+                if player.integer_map[player.pos[1] - 1][player.pos[0]] not in barrier_blocks:
+                    player.pos = (player.pos[0], player.pos[1] - 1)
+                    network.send("update_my_position", ":".join(str(s) for s in player.pos))
             if event.key == pygame.K_s:
-                player.pos = (player.pos[0], player.pos[1] + 1)
-                network.send("update_my_position", ":".join(str(s) for s in player.pos))
+                if player.integer_map[player.pos[1] + 1][player.pos[0]] not in barrier_blocks:
+                    player.pos = (player.pos[0], player.pos[1] + 1)
+                    network.send("update_my_position", ":".join(str(s) for s in player.pos))
 
     if player.has_map:
         for y_rel in range(tile_rows):
             for x_rel in range(tile_columns):
-                x = int((x_rel - tile_columns/2) + player.pos[0])
+                x = int((x_rel - tile_columns / 2) + player.pos[0])
                 y = int((y_rel - tile_rows / 2) + player.pos[1])
-                sprite_num = player.integer_map[y][x]
-                image = pygame.image.load("assets/tile" + str(sprite_num)[0] + ".png")
-                sprite = pygame.transform.scale(image, (tile_size, tile_size))
-                screen.blit(sprite, (int(x_rel * tile_size), int(y_rel * tile_size)))
+                if -1 < x < 100 and -1 < y < 100:
+                    sprite_num = player.integer_map[y][x]
+                    image = pygame.image.load("assets/tiles/tile" + str(sprite_num)[0] + ".png")
+                    sprite = pygame.transform.scale(image, (tile_size, tile_size))
+                    screen.blit(sprite, (int(x_rel * tile_size), int(y_rel * tile_size)))
 
     player.draw(screen)
     for pla in player.other_players:
